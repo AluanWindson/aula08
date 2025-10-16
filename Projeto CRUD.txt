@@ -1,0 +1,284 @@
+=================================================================================
+AULA 08
+==================================================================================
+Criando o ambiente virtual
+python -m venv 
+
+Acessando e Executando o ambiente virtual
+cd SENAC
+cd scripts
+activate
+
+Instalando o DJANGO
+pip install django
+
+Criando um projeto DJANGO (Importante inserir um ponto ao final do nome, para não criar uma pasta dentro da outra)
+django-admin startproject APP .
+
+Executando o projeto no servidor
+python manage.py runserver
+
+Visualizando o projeto no navegador
+http://127.0.0.1:8000
+
+Criando um banco de dados
+python manage.py migrate
+
+Criando um usuário
+python manage.py createsuperuser
+
+Criando um APP
+python manage.py startapp CRUD 
+
+-----------------------------------------------------------------------------
+urls.py
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('crud/', include('crud.urls')), # Necessário digitar http://127.0.0.1:8000/crud
+    path('', include('crud.urls')), # Necessário digitar http://127.0.0.1:8000
+]
+-------------------------------------------------------------------------
+settings.py
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'crud',
+]
+---------------------------------------------------------------------------------
+urls.py(crud)
+
+from django.contrib import admin
+from django.urls import path, include
+from .views import home
+
+urlpatterns = [
+    path('', home),
+]
+------------------------------------------------------------------------
+views.py
+
+from django.shortcuts import render
+
+# Create your views here.
+
+def home(request):
+    return render(request,"index.html")
+
+----------------------------------------------------------------------------------
+
+models.py
+
+from django.db import models
+
+# Create your models here.
+class Pessoa(models.Model):
+    nome = models.CharField(max_length=50)
+    idade = models.IntegerField()
+    def __str__(self):
+        return f"{self.nome} {self.idade}"
+---------------------------------------------------------------------------------
+admin.py
+
+from django.contrib import admin
+from .models import Pessoa
+
+# Register your models here.
+admin.site.register(Pessoa)
+----------------------------------------------------------------------------
+python manage.py makemigrations
+python manage.py migrates
+ 
+----------------------------------------------------------------------------
+views.py
+
+from django.shortcuts import render
+from .models import Pessoa
+
+# Create your views here.
+
+def home(request):
+    pessoas = Pessoa.objects.all()
+    return render(request,"index.html",{"pessoas":pessoas})
+
+-------------------------------------------------------------------------
+index.html
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD - Create Read Update Delete</title>
+</head>
+<body>
+    <h1>Bem vindos ao meu CRUD</h1>
+    <ul>
+        {% for pessoa in pessoas %}
+            <li>{{pessoa.id}} - {{pessoa.nome}} - {{pessoa.idade}}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+
+=================================================================================
+AULA 09
+==================================================================================
+urls.py
+
+from django.contrib import admin
+from django.urls import path, include
+from .views import home, salvar, delete
+
+urlpatterns = [
+    path('', home),
+    path('salvar/', salvar, name = "salvar"),
+    path('apagar/<int:id>', delete, name = "delete"),
+]
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+views.py
+
+from django.shortcuts import render, redirect
+from .models import Pessoa
+
+# Create your views here.
+
+def home(request):
+    pessoas = Pessoa.objects.all()
+    return render(request,"index.html",{"pessoas":pessoas})
+
+def salvar(request):
+    vnome = request.POST.get("nome")
+    vidade = request.POST.get("idade")
+    Pessoa.objects.create(nome=vnome,idade=vidade)
+    pessoas = Pessoa.objects.all()
+    return render(request,"index.html",{"pessoas":pessoas})
+
+def delete(request, id):
+    pessoa = Pessoa.objects.get(id = id)
+    pessoa.delete()
+    return redirect(home)
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+index.html
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD - Create Read Update Delete</title>
+</head>
+<body>
+    <h1>Bem vindos ao meu CRUD</h1>
+    <form action = "{% url 'salvar' %}" method = "POST">
+        {% csrf_token %}
+        <label>Informe o Nome:</label>
+        <input type="text" name="nome">
+        <br>
+        <label>Informe a Idade:</label>
+        <input type="text" name="idade">
+        <br>
+        <button type="submit">SALVAR</button>
+    </form>
+    <ul>
+        {% for pessoa in pessoas %}
+            <li>
+                {{pessoa.id}} - {{pessoa.nome}} - {{pessoa.idade}}
+                <a href = "">EDITAR</a>
+                <a href = "{% url 'delete' pessoa.id %}">APAGAR</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+=================================================================================
+AULA 10
+==================================================================================
+urls.py
+
+from django.contrib import admin
+from django.urls import path, include
+from .views import home, salvar, delete, editar, update
+
+urlpatterns = [
+    path('', home),
+    path('salvar/', salvar, name = "salvar"),
+    path('apagar/<int:id>', delete, name = "delete"),
+    path('editar/<int:id>', editar, name = "editar"),
+    path('update/<int:id>', update, name = "update"),
+]
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+views.py
+
+from django.shortcuts import render, redirect
+from .models import Pessoa
+
+# Create your views here.
+
+def home(request):
+    pessoas = Pessoa.objects.all()
+    return render(request,"index.html",{"pessoas":pessoas})
+
+def salvar(request):
+    vnome = request.POST.get("nome")
+    vidade = request.POST.get("idade")
+    Pessoa.objects.create(nome=vnome,idade=vidade)
+    pessoas = Pessoa.objects.all()
+    return render(request,"index.html",{"pessoas":pessoas})
+
+def delete(request, id):
+    pessoa = Pessoa.objects.get(id = id)
+    pessoa.delete()
+    return redirect(home)
+
+def editar(request, id):
+    pessoa = Pessoa.objects.get(id = id)
+    return render(request,"update.html",{"pessoa":pessoa})
+
+def update(request, id):
+    vnome = request.POST.get("nome")
+    vidade = request.POST.get("idade")
+    pessoa = Pessoa.objects.get(id = id)
+    pessoa.nome = vnome
+    pessoa.idade = vidade
+    pessoa.save()
+    return redirect(home)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+update.html
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form action = "{% url 'update' pessoa.id %}" method = "POST">
+        {% csrf_token %}
+        <input type = "text" name = "nome" value = "{{pessoa.nome}}">
+        <br><br>
+        <input type = "text" name = "idade" value = "{{pessoa.idade}}">
+        <br><br>
+        <button type = "submit">SALVAR</button>
+    </form>
+</body>
+</html>
+
+
+
+
+
+
